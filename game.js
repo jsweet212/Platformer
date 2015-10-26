@@ -2,7 +2,8 @@
 var actorChars = {
   "@": Player,
   "o": Coin, // A coin will wobble up and down
-  "=": Lava, "|": Lava, "v": Lava  
+  "=": Lava, "|": Lava, "v": Lava, 
+  "t": Laser
 };
 
 function Level(plan) {
@@ -38,6 +39,8 @@ function Level(plan) {
       // Because there is a third case (space ' '), use an "else if" instead of "else"
       else if (ch == "!")
         fieldType = "lava";
+      else if(ch == "t")
+        fieldType = "laser";
 
       // "Push" the fieldType, which is a string, onto the gridLine array (at the end).
       gridLine.push(fieldType);
@@ -107,6 +110,16 @@ function Lava(pos, ch) {
   }
 }
 Lava.prototype.type = "lava";
+
+function Laser(pos, ch) {
+  this.pos = pos;
+  this.size = new Vector(1, 1);
+  if (ch == "t") {
+    // Horizontal laser
+    this.speed = new Vector(2, 0);
+  } 
+}
+Laser.prototype.type = "laser";
 
 // Helper function to easily create an element of a type provided 
 function elt(name, className) {
@@ -224,6 +237,8 @@ Level.prototype.obstacleAt = function(pos, size) {
     return "wall";
   if (yEnd > this.height)
     return "lava";
+  if (yEnd > this.height)
+    return "laser";
 
   // Check each grid position starting at yStart, xStart
   // for a possible obstacle (non null value)
@@ -283,6 +298,15 @@ Lava.prototype.act = function(step, level) {
     this.speed = this.speed.times(-1);
 };
 
+Laser.prototype.act = function(step, level) {
+  var newPos = this.pos.plus(this.speed.times(step));
+  if (!level.obstacleAt(newPos, this.size))
+    this.pos = newPos;
+  else if (this.repeatPos)
+    this.pos = this.repeatPos;
+  else
+    this.speed = this.speed.times(-1);
+};
 
 var maxStep = 0.05;
 
@@ -370,6 +394,9 @@ Level.prototype.playerTouched = function(type, actor) {
   if (type == "lava" && this.status == null) {
     this.status = "lost";
     this.finishDelay = 1;
+  } if (type == "laser" && this.status == null) {
+    this.status = "lost";
+    this.finishDelay = 1;
   } else if (type == "coin") {
     this.actors = this.actors.filter(function(other) {
       return other != actor;
@@ -380,6 +407,7 @@ Level.prototype.playerTouched = function(type, actor) {
          })) {
       this.status = "won";
       this.finishDelay = 1;
+
     }
   }
 };
